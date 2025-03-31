@@ -1,0 +1,81 @@
+<resources>
+    <string name="app_name">TutorTrack</string>
+    <string name="title_home">Dashboard</string>
+    <string name="title_students">Students</string>
+    <string name="title_sessions">Sessions</string>
+    <string name="title_reports">Reports</string>
+    
+    <!-- Student related strings -->
+    <string name="add_student">Add Student</string>
+    <string name="edit_student">Edit Student</string>
+    <string name="student_name">Name</string>
+    <string name="student_name_required">Name *</string>
+    <string name="student_email">Email</string>
+    <string name="student_phone">Phone</string>
+    <string name="student_phone_required">Phone *</string>
+    <string name="student_grade">Grade/Level</string>
+    <string name="student_subjects">Subjects</string>
+    <string name="student_hourly_rate">Default Hourly Rate ($)</string>
+    <string name="student_notes">Notes</string>
+    <string name="parent_name">Parent Name</string>
+    <string name="parent_contact">Parent Contact</string>
+    <string name="initial_class_types">Initial Class Types</string>
+    <string name="initial_class_types_required">Initial Class Types *</string>
+    <string name="add_initial_class_type">Add Initial Class Type</string>
+    <string name="required_fields_note">* Required fields</string>
+    
+    <!-- Session related strings -->
+    <string name="add_session">Add Session</string>
+    <string name="edit_session">Edit Session</string>
+    <string name="session_date">Date</string>
+    <string name="session_duration">Duration (hours)</string>
+    <string name="session_topics">Topics Covered</string>
+    <string name="session_paid">Paid</string>
+    <string name="session_amount">Amount ($)</string>
+    <string name="session_notes">Notes</string>
+    <string name="session_student">Student</string>
+    <string name="session_class_type">Class Type</string>
+    <string name="date_paid">Date Paid</string>
+    
+    <!-- Class Type Strings -->
+    <string name="add_class_type">Add Class Type</string>
+    <string name="edit_class_type">Edit Class Type</string>
+    <string name="manage_class_types">Manage Class Types</string>
+    <string name="class_name">Class Name</string>
+    <string name="class_description">Description</string>
+    <string name="hourly_rate">Hourly Rate</string>
+    <string name="no_class_types">No class types found</string>
+    <string name="delete_class_type">Delete Class Type</string>
+    <string name="delete_confirmation">Are you sure you want to delete this class type?</string>
+    <string name="class_type_saved">Class type saved successfully</string>
+    <string name="class_type_deleted">Class type deleted successfully</string>
+    <string name="field_required">This field is required</string>
+    <string name="enter_valid_rate">Please enter a valid rate</string>
+    
+    <!-- Actions -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="confirm_delete">Are you sure you want to delete this item?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="search">Search</string>
+    
+    <!-- Income period strings -->
+    <string name="income_period_total">Total Income</string>
+    <string name="income_period_month">This Month</string>
+    <string name="income_period_week">Last 7 Days</string>
+    
+    <!-- Invoice Feature -->
+    <string name="generate_invoice">Generate Invoice</string>
+    <string name="invoice_message">Invoice Message</string>
+    <string name="copy">Copy</string>
+    <string name="whatsapp">WhatsApp</string>
+    <string name="invoice_copied">Invoice copied to clipboard</string>
+    <string name="no_whatsapp">WhatsApp is not installed on your device</string>
+    <string name="no_unpaid_sessions">No unpaid sessions available</string>
+    <string name="restore_default">Restore Default</string>
+    <string name="edit_invoice_template">Edit Invoice Template</string>
+    <string name="close">Close</string>
+    <string name="edit_template">Edit Template</string>
+</resources>

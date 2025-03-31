@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@+id/navigation_home">
+
+    <fragment
+        android:id="@+id/navigation_home"
+        android:name="com.example.tutortrack.ui.home.HomeFragment"
+        android:label="@string/title_home"
+        tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/navigation_students"
+        android:name="com.example.tutortrack.ui.student.StudentListFragment"
+        android:label="@string/title_students"
+        tools:layout="@layout/fragment_student_list">
+        <action
+            android:id="@+id/action_navigation_students_to_addEditStudentFragment"
+            app:destination="@id/addEditStudentFragment" />
+        <action
+            android:id="@+id/action_navigation_students_to_studentDetailFragment"
+            app:destination="@id/studentDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_sessions"
+        android:name="com.example.tutortrack.ui.session.SessionListFragment"
+        android:label="@string/title_sessions"
+        tools:layout="@layout/fragment_session_list">
+        <action
+            android:id="@+id/action_navigation_sessions_to_addEditSessionFragment"
+            app:destination="@id/addEditSessionFragment" />
+    </fragment>
+        
+    <fragment
+        android:id="@+id/navigation_reports"
+        android:name="com.example.tutortrack.ui.reports.ReportsFragment"
+        android:label="@string/title_reports"
+        tools:layout="@layout/fragment_reports" />
+        
+    <fragment
+        android:id="@+id/addEditStudentFragment"
+        android:name="com.example.tutortrack.ui.student.AddEditStudentFragment"
+        android:label="{title}"
+        tools:layout="@layout/fragment_add_edit_student">
+        <argument
+            android:name="studentId"
+            android:defaultValue="-1L"
+            app:argType="long" />
+        <argument
+            android:name="title"
+            app:argType="string" />
+    </fragment>
+    
+    <fragment
+        android:id="@+id/addEditSessionFragment"
+        android:name="com.example.tutortrack.ui.session.AddEditSessionFragment"
+        android:label="{title}"
+        tools:layout="@layout/fragment_add_edit_session">
+        <argument
+            android:name="sessionId"
+            android:defaultValue="-1L"
+            app:argType="long" />
+        <argument
+            android:name="studentId"
+            android:defaultValue="-1L"
+            app:argType="long" />
+        <argument
+            android:name="title"
+            app:argType="string" />
+    </fragment>
+    
+    <fragment
+        android:id="@+id/studentDetailFragment"
+        android:name="com.example.tutortrack.ui.student.StudentDetailFragment"
+        android:label="Student Details"
+        tools:layout="@layout/fragment_student_detail">
+        <argument
+            android:name="studentId"
+            app:argType="long" />
+        <action
+            android:id="@+id/action_studentDetailFragment_to_addEditSessionFragment"
+            app:destination="@id/addEditSessionFragment" />
+        <action
+            android:id="@+id/action_studentDetailFragment_to_addEditStudentFragment"
+            app:destination="@id/addEditStudentFragment" />
+        <action
+            android:id="@+id/action_studentDetailFragment_to_classTypeListFragment"
+            app:destination="@id/classTypeListFragment" />
+    </fragment>
+    
+    <fragment
+        android:id="@+id/classTypeListFragment"
+        android:name="com.example.tutortrack.ui.classtype.ClassTypeListFragment"
+        android:label="Class Types"
+        tools:layout="@layout/fragment_class_type_list">
+        <argument
+            android:name="studentId"
+            app:argType="long" />
+        <action
+            android:id="@+id/action_classTypeListFragment_to_addEditClassTypeFragment"
+            app:destination="@id/addEditClassTypeFragment" />
+    </fragment>
+    
+    <fragment
+        android:id="@+id/addEditClassTypeFragment"
+        android:name="com.example.tutortrack.ui.classtype.AddEditClassTypeFragment"
+        android:label="{title}"
+        tools:layout="@layout/fragment_add_edit_class_type">
+        <argument
+            android:name="classTypeId"
+            android:defaultValue="-1L"
+            app:argType="long" />
+        <argument
+            android:name="studentId"
+            app:argType="long" />
+        <argument
+            android:name="title"
+            app:argType="string" />
+    </fragment>
+</navigation>
