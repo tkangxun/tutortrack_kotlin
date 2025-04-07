@@ -1,10 +1,15 @@
 package com.example.tutortrack.ui.reports
 
 import android.app.DatePickerDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.tutortrack.R
@@ -14,6 +19,8 @@ import com.example.tutortrack.ui.student.StudentViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.button.MaterialButton
+import java.io.File
+import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -35,6 +42,7 @@ class ReportsFragment : Fragment() {
     
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     private val monthFormat = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+    private val csvDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     private val defaultTemplate = """Dear [parentName],
 
@@ -172,6 +180,12 @@ Total: [Total unpaid sessions]"""
             .observe(viewLifecycleOwner) { total ->
                 binding.textRangeIncome.text = String.format(Locale.getDefault(), "$%.2f", total ?: 0.0)
             }
+        
+        // Add the unpaid amount for the selected date range
+        sessionViewModel.getUnpaidIncomeInDateRange(startDate.time, endDate.time)
+            .observe(viewLifecycleOwner) { unpaidAmount ->
+                binding.textRangeUnpaidIncome.text = String.format(Locale.getDefault(), "$%.2f", unpaidAmount ?: 0.0)
+            }
     }
     
     private fun loadStatistics() {
@@ -198,6 +212,10 @@ Total: [Total unpaid sessions]"""
         binding.buttonEditTemplate.setOnClickListener {
             showEditTemplateDialog()
         }
+        
+        binding.buttonExport.setOnClickListener {
+            exportToCsv()
+        }
     }
 
     private fun loadInvoiceTemplate() {
@@ -216,15 +234,13 @@ Total: [Total unpaid sessions]"""
         val prefs = requireContext().getSharedPreferences("invoice_prefs", 0)
         val currentTemplate = prefs.getString("invoice_template", defaultTemplate) ?: defaultTemplate
         editText.setText(currentTemplate)
-        editText.setSelection(0)  // Set cursor to beginning of text
         
-        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+        val dialog = MaterialAlertDialogBuilder(requireContext())
             .setView(dialogView)
             .create()
-
+        
         buttonRestoreDefault.setOnClickListener {
             editText.setText(defaultTemplate)
-            editText.setSelection(0)  // Set cursor to beginning of text
         }
         
         buttonSave.setOnClickListener {
@@ -237,8 +253,71 @@ Total: [Total unpaid sessions]"""
         buttonCancel.setOnClickListener {
             dialog.dismiss()
         }
-            
+        
         dialog.show()
+    }
+    
+    private fun exportToCsv() {
+        // Get sessions in the selected date range with details
+        sessionViewModel.getSessionsWithDetailsInDateRange(startDate.time, endDate.time)
+            .observe(viewLifecycleOwner) { sessionsWithDetails ->
+                if (sessionsWithDetails.isEmpty()) {
+                    Toast.makeText(requireContext(), "No sessions found in the selected date range", Toast.LENGTH_SHORT).show()
+                    return@observe
+                }
+                
+                try {
+                    // Create CSV file
+                    val fileName = "tutor_track_export_${csvDateFormat.format(startDate.time)}_to_${csvDateFormat.format(endDate.time)}.csv"
+                    val file = File(requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
+                    
+                    FileWriter(file).use { writer ->
+                        // Write header
+                        writer.append("Date,Student,Class Type,Duration (hours),Amount,Paid,Payment Date,Notes\n")
+                        
+                        // Write data
+                        sessionsWithDetails.forEach { sessionWithDetails ->
+                            val session = sessionWithDetails.session
+                            val studentName = sessionWithDetails.student?.name ?: "Unknown"
+                            val classTypeName = sessionWithDetails.classType?.name ?: "Unknown"
+                            
+                            // Format duration in hours
+                            val durationHours = session.durationMinutes / 60.0
+                            
+                            // Format payment date
+                            val paymentDate = session.paidDate?.let { csvDateFormat.format(it) } ?: ""
+                            
+                            // Write row
+                            writer.append("${csvDateFormat.format(session.date)},")
+                            writer.append("${studentName.replace(",", ";")},")
+                            writer.append("${classTypeName.replace(",", ";")},")
+                            writer.append("${String.format("%.2f", durationHours)},")
+                            writer.append("${String.format("%.2f", session.amount)},")
+                            writer.append("${if (session.isPaid) "Yes" else "No"},")
+                            writer.append("${paymentDate},")
+                            writer.append("${session.notes.replace(",", ";").replace("\n", " ")}\n")
+                        }
+                    }
+                    
+                    // Share the file
+                    val uri = FileProvider.getUriForFile(
+                        requireContext(),
+                        "${requireContext().packageName}.provider",
+                        file
+                    )
+                    
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/csv"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    
+                    startActivity(Intent.createChooser(intent, "Share CSV File"))
+                    
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), "Error exporting data: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
     }
 
     override fun onDestroyView() {

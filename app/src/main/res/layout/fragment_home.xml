@@ -64,55 +64,93 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/headerCard">
 
-            <androidx.constraintlayout.widget.ConstraintLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
+                android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/incomeTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/income_period_total"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
+                <!-- Header area with spinner -->
                 <Spinner
                     android:id="@+id/spinnerPeriod"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@+id/incomeTitle"
-                    app:layout_constraintBottom_toBottomOf="@+id/incomeTitle" />
+                    android:background="@drawable/bg_income_header"
+                    android:minHeight="48dp"
+                    style="@style/IncomeHeaderSpinnerStyle" />
 
+                <!-- Content area -->
                 <TextView
                     android:id="@+id/textTotalIncome"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:ellipsize="end"
+                    android:singleLine="true"
                     android:textColor="@color/success"
-                    android:textSize="24sp"
+                    android:textSize="28sp"
                     android:textStyle="bold"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/incomeTitle"
                     tools:text="$1,250.00" />
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardUnpaidIncome"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/cardIncome">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Header area with spinner -->
+                <Spinner
+                    android:id="@+id/spinnerUnpaidPeriod"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_unpaid_header"
+                    android:minHeight="48dp"
+                    style="@style/UnpaidHeaderSpinnerStyle" />
+
+                <!-- Content area -->
+                <TextView
+                    android:id="@+id/textUnpaidIncome"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="@color/warning"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    tools:text="$450.00" />
+
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:id="@+id/statsContainer"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/cardIncome">
+            app:layout_constraintTop_toBottomOf="@+id/cardUnpaidIncome">
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardStudents"
@@ -195,7 +233,7 @@
             android:id="@+id/recentSessionsCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             app:cardBackgroundColor="@color/surface"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"

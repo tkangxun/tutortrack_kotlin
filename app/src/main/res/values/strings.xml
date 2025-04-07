@@ -4,6 +4,7 @@
     <string name="title_students">Students</string>
     <string name="title_sessions">Sessions</string>
     <string name="title_reports">Reports</string>
+    <string name="title_settings">Settings</string>
     
     <!-- Student related strings -->
     <string name="add_student">Add Student</string>
@@ -36,6 +37,7 @@
     <string name="session_student">Student</string>
     <string name="session_class_type">Class Type</string>
     <string name="date_paid">Date Paid</string>
+    <string name="search_by_date">Search sessions by date</string>
     
     <!-- Class Type Strings -->
     <string name="add_class_type">Add Class Type</string>
@@ -63,8 +65,15 @@
     
     <!-- Income period strings -->
     <string name="income_period_total">Total Income</string>
-    <string name="income_period_month">This Month</string>
-    <string name="income_period_week">Last 7 Days</string>
+    <string name="income_period_year">This Year Income</string>
+    <string name="income_period_month">This Month Income</string>
+    <string name="income_period_week">Last 7 Days Income</string>
+    
+    <!-- Unpaid amount periods -->
+    <string name="unpaid_period_total">Total Unpaid Income</string>
+    <string name="unpaid_period_year">This Year Unpaid Income</string>
+    <string name="unpaid_period_month">This Month Unpaid Income</string>
+    <string name="unpaid_period_week">Last 7 Days Unpaid Income</string>
     
     <!-- Invoice Feature -->
     <string name="generate_invoice">Generate Invoice</string>
@@ -78,4 +87,12 @@
     <string name="edit_invoice_template">Edit Invoice Template</string>
     <string name="close">Close</string>
     <string name="edit_template">Edit Template</string>
+    <string name="show_archived_students">Show Archived Students</string>
+    <string name="show_active_students">Show Active Students</string>
+    <string name="no_archived_students">No archived students</string>
+    <string name="no_students">No students added yet</string>
+    <string name="archive_student">Archive Student</string>
+    <string name="unarchive_student">Unarchive Student</string>
+    <string name="archive_confirmation">Archive %1$s? Archived students won\'t appear in lists or when creating sessions.</string>
+    <string name="unarchive_confirmation">Unarchive %1$s? The student will appear in lists and when creating sessions.</string>
 </resources>

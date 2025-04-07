@@ -3,9 +3,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_archive_student"
+        android:title="@string/archive_student"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_delete_student"
         android:icon="@android:drawable/ic_menu_delete"
         android:title="Delete Student"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="never" />
 
 </menu> 

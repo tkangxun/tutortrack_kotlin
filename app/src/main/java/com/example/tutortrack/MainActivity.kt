@@ -11,6 +11,7 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.tutortrack.databinding.ActivityMainBinding
 import androidx.navigation.NavOptions
+import android.view.View
 
 class MainActivity : AppCompatActivity() {
 
@@ -69,6 +70,10 @@ class MainActivity : AppCompatActivity() {
             // If we navigated to a top-level destination, update the bottom nav
             if (topLevelDestinations.contains(destination.id)) {
                 navView.menu.findItem(destination.id)?.isChecked = true
+                navView.visibility = View.VISIBLE
+            } else {
+                // Hide bottom nav for non-top-level destinations
+                navView.visibility = View.GONE
             }
         }
     }

@@ -57,6 +57,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         return repository.getSessionsInDateRange(startDate, endDate)
     }
 
+    fun getSessionsWithDetailsInDateRange(startDate: Date, endDate: Date): LiveData<List<SessionWithDetails>> {
+        return repository.getSessionsWithDetailsInDateRange(startDate, endDate)
+    }
+
     fun getTotalIncome(): LiveData<Double> {
         return repository.getTotalIncome()
     }
@@ -71,5 +75,29 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
 
     fun getWeeklyIncome(): LiveData<Double> {
         return repository.getWeeklyIncome()
+    }
+
+    fun getYearlyIncome(): LiveData<Double> {
+        return repository.getYearlyIncome()
+    }
+
+    fun getTotalUnpaidIncome(): LiveData<Double> {
+        return repository.getTotalUnpaidIncome()
+    }
+
+    fun getUnpaidIncomeInDateRange(startDate: Date, endDate: Date): LiveData<Double> {
+        return repository.getUnpaidIncomeInDateRange(startDate, endDate)
+    }
+
+    fun getMonthlyUnpaidIncome(): LiveData<Double> {
+        return repository.getMonthlyUnpaidIncome()
+    }
+
+    fun getWeeklyUnpaidIncome(): LiveData<Double> {
+        return repository.getWeeklyUnpaidIncome()
+    }
+
+    fun getYearlyUnpaidIncome(): LiveData<Double> {
+        return repository.getYearlyUnpaidIncome()
     }
 } 

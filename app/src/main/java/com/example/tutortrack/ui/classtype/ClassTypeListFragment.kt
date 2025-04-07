@@ -77,11 +77,23 @@ class ClassTypeListFragment : Fragment() {
             classTypeViewModel.getClassTypesByStudentId(args.studentId).observe(viewLifecycleOwner) { classTypes ->
                 adapter.submitList(classTypes)
                 binding.emptyView.visibility = if (classTypes.isEmpty()) View.VISIBLE else View.GONE
+                
+                // Store the current number of class types for deletion check
+                currentClassTypeCount = classTypes.size
             }
         }
     }
     
+    // Track the current number of class types
+    private var currentClassTypeCount = 0
+    
     private fun deleteClassType(classType: ClassType) {
+        // Check if this is the last class type
+        if (currentClassTypeCount <= 1) {
+            Toast.makeText(requireContext(), "Cannot delete the last class type", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
         classTypeViewModel.deleteClassType(classType)
         Toast.makeText(requireContext(), "Class type deleted", Toast.LENGTH_SHORT).show()
     }

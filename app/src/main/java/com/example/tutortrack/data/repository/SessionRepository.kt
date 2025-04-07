@@ -51,6 +51,12 @@ class SessionRepository(private val sessionDao: SessionDao) {
         return sessionDao.getSessionsInDateRange(startDate, endDate)
     }
 
+    fun getSessionsWithDetailsInDateRange(startDate: Date, endDate: Date): LiveData<List<SessionWithDetails>> {
+        return sessionDao.getSessionsWithDetailsInDateRange(startDate, endDate).map { list ->
+            list.map { it.toSessionWithDetails() }
+        }
+    }
+
     fun getTotalIncome(): LiveData<Double> {
         return sessionDao.getTotalIncome()
     }
@@ -65,5 +71,29 @@ class SessionRepository(private val sessionDao: SessionDao) {
 
     fun getWeeklyIncome(): LiveData<Double> {
         return sessionDao.getWeeklyIncome()
+    }
+
+    fun getYearlyIncome(): LiveData<Double> {
+        return sessionDao.getYearlyIncome()
+    }
+
+    fun getTotalUnpaidIncome(): LiveData<Double> {
+        return sessionDao.getTotalUnpaidIncome()
+    }
+    
+    fun getUnpaidIncomeInDateRange(startDate: Date, endDate: Date): LiveData<Double> {
+        return sessionDao.getUnpaidIncomeInDateRange(startDate, endDate)
+    }
+    
+    fun getMonthlyUnpaidIncome(): LiveData<Double> {
+        return sessionDao.getMonthlyUnpaidIncome()
+    }
+    
+    fun getWeeklyUnpaidIncome(): LiveData<Double> {
+        return sessionDao.getWeeklyUnpaidIncome()
+    }
+    
+    fun getYearlyUnpaidIncome(): LiveData<Double> {
+        return sessionDao.getYearlyUnpaidIncome()
     }
 } 

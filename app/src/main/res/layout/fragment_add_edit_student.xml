@@ -37,7 +37,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:hint="@string/student_phone_required"
+            android:hint="@string/student_phone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/layoutName">
@@ -121,10 +121,13 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editNotes"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="120dp"
                 android:gravity="top"
                 android:inputType="textMultiLine"
-                android:lines="4"
+                android:scrollbars="vertical"
+                android:overScrollMode="always"
+                android:scrollbarStyle="insideInset"
+                android:fadeScrollbars="false"
                 android:textColor="@color/text_primary" />
         </com.google.android.material.textfield.TextInputLayout>
 

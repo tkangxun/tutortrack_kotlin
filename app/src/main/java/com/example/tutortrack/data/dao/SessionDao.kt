@@ -46,6 +46,24 @@ interface SessionDao {
 
     @Query("SELECT SUM(amount) FROM sessions WHERE isPaid = 1 AND date >= strftime('%s', 'now', '-7 days') * 1000")
     fun getWeeklyIncome(): LiveData<Double>
+
+    @Query("SELECT SUM(amount) FROM sessions WHERE isPaid = 1 AND strftime('%Y', date/1000, 'unixepoch') = strftime('%Y', 'now')")
+    fun getYearlyIncome(): LiveData<Double>
+    
+    @Query("SELECT SUM(amount) FROM sessions WHERE isPaid = 0")
+    fun getTotalUnpaidIncome(): LiveData<Double>
+    
+    @Query("SELECT SUM(amount) FROM sessions WHERE isPaid = 0 AND date BETWEEN :startDate AND :endDate")
+    fun getUnpaidIncomeInDateRange(startDate: Date, endDate: Date): LiveData<Double>
+    
+    @Query("SELECT SUM(amount) FROM sessions WHERE isPaid = 0 AND strftime('%Y-%m', date/1000, 'unixepoch') = strftime('%Y-%m', 'now')")
+    fun getMonthlyUnpaidIncome(): LiveData<Double>
+    
+    @Query("SELECT SUM(amount) FROM sessions WHERE isPaid = 0 AND date >= strftime('%s', 'now', '-7 days') * 1000")
+    fun getWeeklyUnpaidIncome(): LiveData<Double>
+    
+    @Query("SELECT SUM(amount) FROM sessions WHERE isPaid = 0 AND strftime('%Y', date/1000, 'unixepoch') = strftime('%Y', 'now')")
+    fun getYearlyUnpaidIncome(): LiveData<Double>
     
     @Transaction
     @Query("SELECT sessions.*, students.name as studentName, class_types.name as classTypeName FROM sessions " +
@@ -68,4 +86,12 @@ interface SessionDao {
            "LEFT JOIN class_types ON sessions.classTypeId = class_types.id " +
            "WHERE sessions.id = :sessionId")
     fun getSessionWithDetailsById(sessionId: Long): LiveData<SessionWithStudentAndClassType>
+
+    @Transaction
+    @Query("SELECT sessions.*, students.name as studentName, class_types.name as classTypeName FROM sessions " +
+           "LEFT JOIN students ON sessions.studentId = students.id " +
+           "LEFT JOIN class_types ON sessions.classTypeId = class_types.id " +
+           "WHERE sessions.date BETWEEN :startDate AND :endDate " +
+           "ORDER BY sessions.date DESC")
+    fun getSessionsWithDetailsInDateRange(startDate: Date, endDate: Date): LiveData<List<SessionWithStudentAndClassType>>
 } 

@@ -16,6 +16,9 @@
     <!-- Surface and background colors -->
     <color name="surface">#FFFFFF</color>
     <color name="background">#F5F5F5</color>
+    <color name="divider">#E0E0E0</color>
+    <color name="header_background">#F9F9F9</color>
+    <color name="highlight_overlay">#331565C0</color>
     
     <!-- Text colors -->
     <color name="text_primary">#212121</color>
@@ -28,6 +31,7 @@
     <color name="success">#4CAF50</color>
     <color name="warning">#FFC107</color>
     <color name="error">#F44336</color>
+    <color name="negative">#F44336</color>
     
     <!-- Legacy colors (keeping for backward compatibility) -->
     <color name="purple_200">#FFBB86FC</color>

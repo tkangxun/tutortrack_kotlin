@@ -11,6 +11,7 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.tutortrack.data.model.ClassType
 import com.example.tutortrack.data.model.Session
@@ -18,10 +19,13 @@ import com.example.tutortrack.data.model.Student
 import com.example.tutortrack.databinding.FragmentAddEditSessionBinding
 import com.example.tutortrack.ui.classtype.ClassTypeViewModel
 import com.example.tutortrack.ui.student.StudentViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 class AddEditSessionFragment : Fragment() {
 
@@ -211,13 +215,20 @@ class AddEditSessionFragment : Fragment() {
                     val classType = classTypes[position]
                     selectedClassTypeId = classType.id
                     selectedClassTypeRate = classType.hourlyRate
+                    
+                    // Recalculate amount when class type changes
                     calculateAmount()
+                } else {
+                    selectedClassTypeId = -1L
+                    selectedClassTypeRate = 0.0
+                    binding.editAmount.setText("0.00")
                 }
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
                 selectedClassTypeId = -1L
                 selectedClassTypeRate = 0.0
+                binding.editAmount.setText("0.00")
             }
         }
     }
@@ -291,8 +302,9 @@ class AddEditSessionFragment : Fragment() {
                 binding.editPaidDate.setText(dateFormat.format(it))
             }
             
-            // Populate other fields
-            binding.editDuration.setText(loadedSession.durationMinutes.toString())
+            // Convert duration from minutes to hours for display
+            val durationHours = loadedSession.durationMinutes / 60.0
+            binding.editDuration.setText(String.format(Locale.getDefault(), "%.2f", durationHours))
             binding.editAmount.setText(String.format(Locale.getDefault(), "%.2f", loadedSession.amount))
             binding.editNotes.setText(loadedSession.notes)
         }
@@ -303,11 +315,18 @@ class AddEditSessionFragment : Fragment() {
         if (durationText.isNotEmpty() && selectedClassTypeRate > 0) {
             try {
                 val durationHours = durationText.toDouble()
-                val amount = durationHours * selectedClassTypeRate
-                binding.editAmount.setText(String.format(Locale.getDefault(), "%.2f", amount))
+                if (durationHours > 0) {
+                    // Calculate amount with proper rounding
+                    val amount = (durationHours * selectedClassTypeRate * 100).roundToInt() / 100.0
+                    binding.editAmount.setText(String.format(Locale.getDefault(), "%.2f", amount))
+                } else {
+                    binding.editAmount.setText("0.00")
+                }
             } catch (e: NumberFormatException) {
-                // Invalid duration, do nothing
+                binding.editAmount.setText("0.00")
             }
+        } else {
+            binding.editAmount.setText("0.00")
         }
     }
     
@@ -343,8 +362,21 @@ class AddEditSessionFragment : Fragment() {
         
         try {
             val durationHours = durationText.toDouble()
-            duration = (durationHours * 60).toInt() // Convert hours to minutes
+            // Convert hours to minutes, rounding to nearest minute
+            duration = (durationHours * 60).roundToInt()
             amount = amountText.toDouble()
+            
+            // Validate duration
+            if (duration <= 0) {
+                Toast.makeText(requireContext(), "Duration must be greater than 0", Toast.LENGTH_SHORT).show()
+                return
+            }
+            
+            // Validate amount
+            if (amount <= 0) {
+                Toast.makeText(requireContext(), "Amount must be greater than 0", Toast.LENGTH_SHORT).show()
+                return
+            }
         } catch (e: NumberFormatException) {
             Toast.makeText(requireContext(), "Please enter valid numbers", Toast.LENGTH_SHORT).show()
             return
@@ -357,6 +389,15 @@ class AddEditSessionFragment : Fragment() {
         } else {
             // If not paid, set to null
             null
+        }
+        
+        // Check if notes are new or changed
+        val shouldAppendNotes = if (isEditMode) {
+            // For edit mode, only append if notes have been changed
+            notes.isNotEmpty() && notes != session?.notes
+        } else {
+            // For new sessions, append if notes exist
+            notes.isNotEmpty()
         }
         
         // Create or update session
@@ -399,9 +440,193 @@ class AddEditSessionFragment : Fragment() {
         } else {
             sessionViewModel.insertSession(updatedSession)
         }
+
+        // Append session notes to student notes if needed
+        if (shouldAppendNotes) {
+            // Disable the save button to prevent multiple submissions
+            binding.buttonSave.isEnabled = false
+            binding.progressBar.visibility = View.VISIBLE
+            
+            // Use the helper method to append notes - after updating, it will navigate back
+            addNotesToStudent(notes, date, selectedStudentId, selectedClassTypeId)
+        } else {
+            // If no notes to append, navigate back immediately
+            findNavController().navigateUp()
+        }
+    }
+    
+    private fun addNotesToStudent(sessionNotes: String, sessionDate: Date, studentId: Long, classTypeId: Long) {
+        // Get class type name directly from the spinner
+        val classTypeName = classTypes.find { it.id == classTypeId }?.name ?: "Unknown"
         
-        // Navigate back
-        findNavController().navigateUp()
+        // Format the day of week and date
+        val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
+        val day = dayFormat.format(sessionDate)
+        val dateStr = dateFormat.format(sessionDate)
+        
+        // Format the note to append
+        val formattedNote = "[${classTypeName}] ($day, $dateStr) - $sessionNotes"
+        
+        // Get student data once - use get directly to avoid multiple updates
+        val studentLiveData = studentViewModel.getStudentById(studentId)
+        var observer: androidx.lifecycle.Observer<Student>? = null
+        
+        observer = androidx.lifecycle.Observer<Student> { student ->
+            // Remove observer immediately to prevent multiple calls
+            studentLiveData.removeObserver(observer!!)
+            
+            if (student == null) {
+                binding.progressBar.visibility = View.GONE
+                binding.buttonSave.isEnabled = true
+                findNavController().navigateUp()
+                return@Observer
+            }
+            
+            // Format notes with new line only if existing notes aren't blank
+            val updatedNotes = if (student.notes.isBlank()) {
+                formattedNote
+            } else {
+                "${student.notes}\n$formattedNote"
+            }
+            
+            // Update student with new notes
+            val updatedStudent = student.copy(notes = updatedNotes)
+            studentViewModel.updateStudent(updatedStudent)
+            
+            // Show a confirmation toast
+            Toast.makeText(
+                requireContext(),
+                "Session notes added to student profile",
+                Toast.LENGTH_SHORT
+            ).show()
+            
+            // Log for debugging
+            println("Updated student notes: $updatedNotes")
+            
+            // Use a short delay to let the database update complete
+            lifecycleScope.launch {
+                delay(300)
+                binding.progressBar.visibility = View.GONE
+                binding.buttonSave.isEnabled = true
+                findNavController().navigateUp()
+            }
+        }
+        
+        // Observe only once with the custom observer
+        studentLiveData.observe(viewLifecycleOwner, observer)
+    }
+    
+    // Keep the original methods for reference, but they won't be used directly
+    private fun appendSessionNotesToStudentSync(sessionNotes: String, sessionDate: Date, studentId: Long, classTypeId: Long) {
+        // Show a loading indicator
+        binding.progressBar.visibility = View.VISIBLE
+        binding.buttonSave.isEnabled = false
+        
+        // Track whether we've already processed the update
+        var updateProcessed = false
+        
+        // Get class type name directly from the spinner
+        val classTypeName = classTypes.find { it.id == classTypeId }?.name ?: "Unknown"
+        
+        // Format the day of week and date
+        val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
+        val day = dayFormat.format(sessionDate)
+        val dateStr = dateFormat.format(sessionDate)
+        
+        // Format the note to append
+        val formattedNote = "[${classTypeName}] ($day, $dateStr) - $sessionNotes"
+        
+        // Create a one-time observer to avoid multiple updates
+        val liveData = studentViewModel.getStudentById(studentId)
+        
+        liveData.observe(viewLifecycleOwner) { student ->
+            // Skip if we've already processed an update
+            if (updateProcessed) {
+                return@observe
+            }
+            
+            // Mark as processed to prevent duplicate updates
+            updateProcessed = true
+            
+            if (student == null) {
+                // Hide loading indicator
+                binding.progressBar.visibility = View.GONE
+                binding.buttonSave.isEnabled = true
+                // Navigate back anyway if student not found
+                findNavController().navigateUp()
+                return@observe
+            }
+            
+            // If student notes are empty, don't add a leading newline
+            val updatedNotes = if (student.notes.isBlank()) {
+                formattedNote
+            } else {
+                "${student.notes}\n$formattedNote"
+            }
+            
+            // Create new student with updated notes
+            val updatedStudent = student.copy(
+                notes = updatedNotes
+            )
+            
+            // Update the student in the database
+            studentViewModel.updateStudent(updatedStudent)
+            
+            // Show success message
+            Toast.makeText(
+                requireContext(), 
+                "Session notes added to student profile", 
+                Toast.LENGTH_SHORT
+            ).show()
+            
+            // Log update for debugging
+            println("Updated student notes: $updatedNotes")
+            
+            // Use a small delay to ensure the update completes before navigating
+            lifecycleScope.launch {
+                delay(300)
+                // Hide loading indicator
+                binding.progressBar.visibility = View.GONE
+                binding.buttonSave.isEnabled = true
+                // Navigate back after the delay
+                findNavController().navigateUp()
+            }
+        }
+    }
+    
+    private fun appendSessionNotesToStudent(sessionNotes: String, sessionDate: Date, studentId: Long, classTypeId: Long) {
+        // Get the class type name
+        classTypeViewModel.getClassTypeById(classTypeId).observe(viewLifecycleOwner) { classType ->
+            if (classType != null) {
+                // Format the day of week and date
+                val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
+                val day = dayFormat.format(sessionDate)
+                val dateStr = dateFormat.format(sessionDate)
+                
+                // Get the student and append the note
+                studentViewModel.getStudentById(studentId).observe(viewLifecycleOwner) { student ->
+                    if (student != null) {
+                        // Format the note to append
+                        val formattedNote = "[${classType.name}] ($day, $dateStr) - $sessionNotes"
+                        
+                        // If student notes are empty, don't add a leading newline
+                        val updatedNotes = if (student.notes.isBlank()) {
+                            formattedNote
+                        } else {
+                            "${student.notes}\n$formattedNote"
+                        }
+                        
+                        // Create new student with updated notes
+                        val updatedStudent = student.copy(
+                            notes = updatedNotes
+                        )
+                        
+                        // Update the student in the database
+                        studentViewModel.updateStudent(updatedStudent)
+                    }
+                }
+            }
+        }
     }
 
     override fun onDestroyView() {

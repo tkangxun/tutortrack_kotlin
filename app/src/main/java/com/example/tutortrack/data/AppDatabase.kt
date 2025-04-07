@@ -107,7 +107,44 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
-@Database(entities = [Student::class, Session::class, ClassType::class], version = 5, exportSchema = false)
+// Migration from version 5 to 6: Make phone field nullable in students table
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create a new temporary table with nullable phone field
+        database.execSQL(
+            "CREATE TABLE students_new (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "name TEXT NOT NULL, " +
+                "phone TEXT, " +
+                "grade TEXT NOT NULL, " +
+                "parentName TEXT NOT NULL DEFAULT '', " +
+                "parentContact TEXT NOT NULL DEFAULT '', " +
+                "notes TEXT NOT NULL DEFAULT '')"
+        )
+        
+        // Copy data from the old table to the new table
+        database.execSQL(
+            "INSERT INTO students_new (id, name, phone, grade, parentName, parentContact, notes) " +
+                "SELECT id, name, phone, grade, parentName, parentContact, notes FROM students"
+        )
+        
+        // Drop the old table
+        database.execSQL("DROP TABLE students")
+        
+        // Rename the new table to the old table name
+        database.execSQL("ALTER TABLE students_new RENAME TO students")
+    }
+}
+
+// Migration from version 6 to 7: Add isArchived field to students table
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Add isArchived column with a default value of 0 (false)
+        database.execSQL("ALTER TABLE students ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+@Database(entities = [Student::class, Session::class, ClassType::class], version = 7, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
@@ -127,7 +164,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "tutor_track_database"
                 )
                 .fallbackToDestructiveMigration()
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .build()
                 INSTANCE = instance
                 instance

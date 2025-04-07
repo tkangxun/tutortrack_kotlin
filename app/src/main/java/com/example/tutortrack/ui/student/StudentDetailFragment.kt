@@ -1,6 +1,7 @@
 package com.example.tutortrack.ui.student
 
 import android.app.AlertDialog
+import android.app.DatePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -9,6 +10,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateFormat
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -16,17 +18,20 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.tutortrack.R
 import com.example.tutortrack.data.model.Session
 import com.example.tutortrack.data.model.Student
 import com.example.tutortrack.databinding.DialogInvoiceBinding
 import com.example.tutortrack.databinding.FragmentStudentDetailBinding
+import com.example.tutortrack.databinding.ItemSessionBinding
 import com.example.tutortrack.ui.adapters.SessionAdapter
 import com.example.tutortrack.ui.adapters.SessionWithDetails
 import com.example.tutortrack.ui.classtype.ClassTypeViewModel
@@ -34,8 +39,10 @@ import com.example.tutortrack.ui.session.SessionViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 class StudentDetailFragment : Fragment() {
 
@@ -97,6 +104,10 @@ class StudentDetailFragment : Fragment() {
             onSessionDelete = { session ->
                 // Delete the session
                 deleteSession(session)
+            },
+            onSessionEdit = { session ->
+                // Navigate to edit session
+                editSession(session)
             }
         )
         binding.recyclerViewSessions.layoutManager = LinearLayoutManager(requireContext())
@@ -116,16 +127,45 @@ class StudentDetailFragment : Fragment() {
         Toast.makeText(requireContext(), "Session deleted", Toast.LENGTH_SHORT).show()
     }
     
+    private fun editSession(session: Session) {
+        val bundle = Bundle().apply {
+            putLong("sessionId", session.id)
+            putLong("studentId", studentId)
+            putString("title", getString(R.string.edit_session))
+        }
+        findNavController().navigate(R.id.addEditSessionFragment, bundle)
+    }
+    
     private fun setupMenu() {
         requireActivity().addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
                 menuInflater.inflate(R.menu.menu_student_detail, menu)
+                
+                // Update the menu based on student's archived status
+                currentStudent?.let { student ->
+                    val archiveMenuItem = menu.findItem(R.id.action_archive_student)
+                    if (student.isArchived) {
+                        archiveMenuItem.setTitle(R.string.unarchive_student)
+                    } else {
+                        archiveMenuItem.setTitle(R.string.archive_student)
+                    }
+                }
             }
 
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 return when (menuItem.itemId) {
                     R.id.action_delete_student -> {
                         showDeleteStudentConfirmation()
+                        true
+                    }
+                    R.id.action_archive_student -> {
+                        currentStudent?.let { student ->
+                            if (student.isArchived) {
+                                showUnarchiveStudentConfirmation()
+                            } else {
+                                showArchiveStudentConfirmation()
+                            }
+                        }
                         true
                     }
                     else -> false
@@ -224,6 +264,7 @@ class StudentDetailFragment : Fragment() {
                         binding.recyclerViewSessions.visibility = View.GONE
                         binding.fabAddSession.visibility = View.GONE
                         binding.fabInvoice.visibility = View.GONE
+                        binding.fabDateSearch.visibility = View.GONE
                         binding.textNoSessions.visibility = View.GONE
                         binding.fabEditStudent.visibility = View.VISIBLE
                     }
@@ -231,6 +272,7 @@ class StudentDetailFragment : Fragment() {
                         binding.nestedScrollInfo.visibility = View.GONE
                         binding.recyclerViewSessions.visibility = View.VISIBLE
                         binding.fabAddSession.visibility = View.VISIBLE
+                        binding.fabDateSearch.visibility = View.VISIBLE
                         binding.fabEditStudent.visibility = View.GONE
                         
                         val isSessionsEmpty = sessionAdapter.itemCount == 0
@@ -276,29 +318,127 @@ class StudentDetailFragment : Fragment() {
             fabInvoice.setOnClickListener {
                 generateInvoice()
             }
+            
+            fabDateSearch.setOnClickListener {
+                showDatePickerForSearch()
+            }
+        }
+    }
+    
+    private fun showInvoiceDialog(message: String) {
+        try {
+            // Log the start of dialog creation
+            Log.d("StudentDetailFragment", "Creating invoice dialog with message length: ${message.length}")
+            
+            // Create dialog with a more standard approach
+            val dialogBinding = DialogInvoiceBinding.inflate(layoutInflater)
+            dialogBinding.editInvoiceMessage.setText(message)
+            dialogBinding.editInvoiceMessage.setSelection(0)
+            
+            // Use a more compatible dialog creation approach
+            val dialog = AlertDialog.Builder(requireContext())
+                .setView(dialogBinding.root)
+                .create()
+                
+            // Set up button listeners
+            dialogBinding.buttonCopy.setOnClickListener {
+                copyToClipboard(dialogBinding.editInvoiceMessage.text.toString())
+            }
+            
+            dialogBinding.buttonWhatsApp.setOnClickListener {
+                sendToWhatsApp(dialogBinding.editInvoiceMessage.text.toString())
+            }
+            
+            dialogBinding.buttonCloseDialog.setOnClickListener {
+                dialog.dismiss()
+            }
+            
+            // Show dialog with error handling
+            try {
+                dialog.show()
+                Log.d("StudentDetailFragment", "Invoice dialog shown successfully")
+            } catch (e: Exception) {
+                Log.e("StudentDetailFragment", "Error showing dialog: ${e.message}", e)
+                // Fallback to a simpler dialog if the custom one fails
+                showFallbackInvoiceDialog(message)
+            }
+        } catch (e: Exception) {
+            Log.e("StudentDetailFragment", "Error creating invoice dialog: ${e.message}", e)
+            // Show a simple toast with the invoice text as fallback
+            Toast.makeText(requireContext(), "Error showing invoice dialog. Invoice text: $message", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    private fun showFallbackInvoiceDialog(message: String) {
+        try {
+            // Create a simple dialog as fallback
+            val builder = AlertDialog.Builder(requireContext())
+            builder.setTitle("Invoice")
+                .setMessage(message)
+                .setPositiveButton("Copy") { _, _ -> copyToClipboard(message) }
+                .setNegativeButton("Close", null)
+                .show()
+        } catch (e: Exception) {
+            Log.e("StudentDetailFragment", "Error showing fallback dialog: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error showing invoice dialog", Toast.LENGTH_SHORT).show()
         }
     }
     
     private fun generateInvoice() {
-        if (unpaidSessions.isEmpty() || currentStudent == null) {
-            Toast.makeText(requireContext(), R.string.no_unpaid_sessions, Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        val prefs = requireContext().getSharedPreferences("invoice_prefs", 0)
-        val templateStr = prefs.getString("invoice_template", null) ?: return
-        
-        val sessionDetails = buildSessionDetails()
-        val totalAmount = unpaidSessions.sumOf { it.session.amount }
-        
-        // Replace placeholders in template
-        val message = templateStr
-            .replace("[parentName]", currentStudent?.parentName ?: "Parent")
-            .replace("[studentName]", currentStudent?.name ?: "Student")
-            .replace("[[SessionDate] - [classTypeName] ([sessionDuration] hrs) [sessionIncome]]", sessionDetails)
-            .replace("[Total unpaid sessions]", String.format(Locale.getDefault(), "$%.2f", totalAmount))
+        try {
+            Log.d("StudentDetailFragment", "Generating invoice. Unpaid sessions: ${unpaidSessions.size}, Current student: ${currentStudent?.name}")
             
-        showInvoiceDialog(message)
+            if (unpaidSessions.isEmpty() || currentStudent == null) {
+                Toast.makeText(requireContext(), R.string.no_unpaid_sessions, Toast.LENGTH_SHORT).show()
+                return
+            }
+            
+            val prefs = requireContext().getSharedPreferences("invoice_prefs", 0)
+            var templateStr = prefs.getString("invoice_template", null)
+            
+            // If no template exists, use default template and save it
+            if (templateStr == null) {
+                Log.d("StudentDetailFragment", "No invoice template found, using default template")
+                templateStr = getDefaultInvoiceTemplate()
+                
+                // Save the default template for future use
+                prefs.edit().putString("invoice_template", templateStr).apply()
+                Log.d("StudentDetailFragment", "Default invoice template saved")
+            }
+            
+            val sessionDetails = buildSessionDetails()
+            val totalAmount = unpaidSessions.sumOf { it.session.amount }
+            
+            // Replace placeholders in template
+            val message = templateStr
+                .replace("[parentName]", currentStudent?.parentName ?: "Parent")
+                .replace("[studentName]", currentStudent?.name ?: "Student")
+                .replace("[[SessionDate] - [classTypeName] ([sessionDuration] hrs) [sessionIncome]]", sessionDetails)
+                .replace("[Total unpaid sessions]", String.format(Locale.getDefault(), "$%.2f", totalAmount))
+                
+            Log.d("StudentDetailFragment", "Invoice message generated, length: ${message.length}")
+            showInvoiceDialog(message)
+        } catch (e: Exception) {
+            Log.e("StudentDetailFragment", "Error generating invoice: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error generating invoice: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    private fun getDefaultInvoiceTemplate(): String {
+        return """
+            Dear [parentName],
+            
+            This is an invoice for tutoring sessions for [studentName].
+            
+            Session Details:
+            [[SessionDate] - [classTypeName] ([sessionDuration] hrs) [sessionIncome]]
+            
+            Total Amount Due: [Total unpaid sessions]
+            
+            Please make payment at your earliest convenience.
+            
+            Thank you for your business!
+        """.trimIndent()
     }
     
     private fun buildSessionDetails(): String {
@@ -315,30 +455,6 @@ class StudentDetailFragment : Fragment() {
         }
         
         return sb.toString()
-    }
-    
-    private fun showInvoiceDialog(message: String) {
-        val dialogBinding = DialogInvoiceBinding.inflate(layoutInflater)
-        dialogBinding.editInvoiceMessage.setText(message)
-        dialogBinding.editInvoiceMessage.setSelection(0)
-        
-        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
-            .setView(dialogBinding.root)
-            .create()
-            
-        dialogBinding.buttonCopy.setOnClickListener {
-            copyToClipboard(dialogBinding.editInvoiceMessage.text.toString())
-        }
-        
-        dialogBinding.buttonWhatsApp.setOnClickListener {
-            sendToWhatsApp(dialogBinding.editInvoiceMessage.text.toString())
-        }
-        
-        dialogBinding.buttonCloseDialog.setOnClickListener {
-            dialog.dismiss()
-        }
-        
-        dialog.show()
     }
     
     private fun copyToClipboard(text: String) {
@@ -469,6 +585,171 @@ class StudentDetailFragment : Fragment() {
             true
         } catch (e: PackageManager.NameNotFoundException) {
             false
+        }
+    }
+
+    private fun showDatePickerForSearch() {
+        val calendar = Calendar.getInstance()
+        
+        val datePickerDialog = DatePickerDialog(
+            requireContext(),
+            { _, year, month, day ->
+                calendar.set(year, month, day)
+                val selectedDate = calendar.time
+                findAndHighlightSessionByDate(selectedDate)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        
+        datePickerDialog.show()
+    }
+    
+    private fun findAndHighlightSessionByDate(targetDate: Date) {
+        // Get all sessions for the current student
+        val currentSessions = sessionAdapter.currentList
+        if (currentSessions.isEmpty()) {
+            Toast.makeText(requireContext(), "No sessions found", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Find session closest to target date
+        val closestSession = currentSessions.minByOrNull { 
+            abs(it.session.date.time - targetDate.time)
+        }
+        
+        if (closestSession == null) {
+            Toast.makeText(requireContext(), "No matching sessions found", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Find position in the RecyclerView
+        val position = currentSessions.indexOf(closestSession)
+        if (position == -1) return
+        
+        // Show a toast with the found date
+        val dateFormatter = SimpleDateFormat("EEE, MMM dd", Locale.getDefault())
+        Toast.makeText(
+            requireContext(),
+            "Found: ${dateFormatter.format(closestSession.session.date)}",
+            Toast.LENGTH_SHORT
+        ).show()
+        
+        // Make sure the toolbar is expanded first to ensure consistent positioning
+        binding.appBarLayout.setExpanded(true)
+        
+        // Wait for the toolbar animation to complete before scrolling
+        binding.appBarLayout.postDelayed({
+            val layoutManager = binding.recyclerViewSessions.layoutManager as LinearLayoutManager
+            
+            // Get the top padding
+            val topPadding = resources.getDimensionPixelSize(R.dimen.recycler_view_top_padding)
+            
+            // Check if this is the last or near-last item
+            if (position >= currentSessions.size - 3) {
+                // Special handling for last few items
+                
+                // First scroll to the end to make sure all content is loaded and measured
+                binding.recyclerViewSessions.scrollToPosition(currentSessions.size - 1)
+                
+                // Then post a delayed action to ensure end has been reached
+                binding.recyclerViewSessions.postDelayed({
+                    // Finally scroll to our target position with appropriate offset
+                    layoutManager.scrollToPositionWithOffset(position, topPadding)
+                    
+                    // Highlight the session
+                    binding.recyclerViewSessions.postDelayed({
+                        highlightSessionCard(position)
+                    }, 150)
+                }, 200)
+            } else {
+                // Normal case - non-last items
+                // Two-phase approach for reliability
+                binding.recyclerViewSessions.scrollToPosition(position)
+                
+                binding.recyclerViewSessions.post {
+                    layoutManager.scrollToPositionWithOffset(position, topPadding)
+                    
+                    binding.recyclerViewSessions.postDelayed({
+                        highlightSessionCard(position)
+                    }, 150)
+                }
+            }
+        }, 100) // Short delay for toolbar animation
+    }
+    
+    private fun highlightSessionCard(position: Int) {
+        val viewHolder = binding.recyclerViewSessions.findViewHolderForAdapterPosition(position)
+        
+        if (viewHolder != null) {
+            val itemView = viewHolder.itemView
+            
+            // Save original state
+            val originalBackground = itemView.background
+            
+            // Apply highlight color
+            itemView.setBackgroundColor(resources.getColor(R.color.highlight_overlay, null))
+            
+            // Schedule removal of highlight after delay
+            itemView.postDelayed({
+                // Animate back to original
+                itemView.animate()
+                    .setDuration(300)
+                    .withEndAction {
+                        itemView.background = originalBackground
+                    }
+                    .start()
+            }, 500) // Highlight for 0.5 seconds
+        } else {
+            // If ViewHolder not found, try again after a short delay
+            binding.recyclerViewSessions.postDelayed({
+                highlightSessionCard(position)
+            }, 100)
+        }
+    }
+
+    private fun showArchiveStudentConfirmation() {
+        currentStudent?.let { student ->
+            AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.archive_student))
+                .setMessage(getString(R.string.archive_confirmation, student.name))
+                .setPositiveButton("Archive") { _, _ ->
+                    archiveStudent()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
+    private fun showUnarchiveStudentConfirmation() {
+        currentStudent?.let { student ->
+            AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.unarchive_student))
+                .setMessage(getString(R.string.unarchive_confirmation, student.name))
+                .setPositiveButton("Unarchive") { _, _ ->
+                    unarchiveStudent()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
+    private fun archiveStudent() {
+        currentStudent?.let { student ->
+            studentViewModel.archiveStudent(student)
+            Toast.makeText(requireContext(), "${student.name} archived", Toast.LENGTH_SHORT).show()
+            // Return to student list after archiving
+            findNavController().navigateUp()
+        }
+    }
+
+    private fun unarchiveStudent() {
+        currentStudent?.let { student ->
+            studentViewModel.unarchiveStudent(student)
+            Toast.makeText(requireContext(), "${student.name} unarchived", Toast.LENGTH_SHORT).show()
+            // Stay on the detail page after unarchiving, refresh the options menu
+            requireActivity().invalidateOptionsMenu()
         }
     }
 

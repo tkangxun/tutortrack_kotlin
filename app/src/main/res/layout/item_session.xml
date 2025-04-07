@@ -6,35 +6,39 @@
     android:layout_height="wrap_content"
     android:layout_marginStart="12dp"
     android:layout_marginEnd="12dp"
-    android:layout_marginTop="8dp"
-    android:layout_marginBottom="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="4dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="1dp"
     app:cardBackgroundColor="@color/surface"
     app:strokeWidth="0dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
 
-        <!-- Calendar date indicator -->
+        <!-- Calendar date indicator - made smaller -->
         <LinearLayout
             android:id="@+id/dateContainer"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="@drawable/calendar_date_background"
             android:gravity="center"
             android:orientation="vertical"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
 
             <TextView
                 android:id="@+id/textDateMonth"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/text_on_primary"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 android:textStyle="bold"
                 tools:text="MAY" />
 
@@ -43,122 +47,110 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/text_on_primary"
-                android:textSize="18sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 tools:text="15" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/textStudentName"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@+id/textSessionDate"
-            app:layout_constraintStart_toEndOf="@+id/dateContainer"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="John Doe" />
-
-        <TextView
-            android:id="@+id/textSessionDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="May 15, 2023" />
-
-        <TextView
-            android:id="@+id/textClassType"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="4dp"
-            android:textColor="@color/secondary"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/dateContainer"
-            app:layout_constraintTop_toBottomOf="@+id/textStudentName"
-            tools:text="Mathematics" />
-
-        <!-- Session details row -->
+        <!-- Main Content - Combined student name and class type -->
         <LinearLayout
-            android:id="@+id/sessionDetailsRow"
+            android:id="@+id/contentContainer"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal"
-            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toEndOf="@+id/dateContainer"
-            app:layout_constraintTop_toBottomOf="@+id/textClassType">
-
-            <ImageView
-                android:id="@+id/iconTime"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@android:drawable/ic_menu_recent_history"
-                android:tint="@color/text_secondary" />
+            app:layout_constraintEnd_toStartOf="@+id/amountContainer"
+            app:layout_constraintBottom_toBottomOf="parent">
 
             <TextView
-                android:id="@+id/textSessionDuration"
-                android:layout_width="wrap_content"
+                android:id="@+id/textStudentName"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/text_primary"
                 android:textSize="14sp"
-                tools:text="60 minutes" />
+                android:textStyle="bold"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="John Doe" />
 
-            <View
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
+            <TextView
+                android:id="@+id/textClassType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/secondary"
+                android:textSize="12sp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="Mathematics" />
 
-            <ImageView
-                android:id="@+id/iconMoney"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@android:drawable/ic_menu_info_details"
-                android:tint="@color/text_secondary" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="2dp">
+
+                <ImageView
+                    android:id="@+id/iconTime"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    android:tint="@color/text_secondary" />
+
+                <TextView
+                    android:id="@+id/textSessionDuration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    tools:text="60 min" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Amount and Paid Status - Right side of card -->
+        <LinearLayout
+            android:id="@+id/amountContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="end"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
 
             <TextView
                 android:id="@+id/textSessionAmount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
                 android:textColor="@color/text_primary"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                tools:text="SGD $50.00" />
+                tools:text="$50.00" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipPaidStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="24dp"
+                android:textSize="10sp"
+                app:chipMinHeight="24dp"
+                app:chipMinTouchTargetSize="24dp"
+                app:ensureMinTouchTargetSize="false"
+                tools:chipBackgroundColor="@color/success"
+                tools:text="Paid" />
+
+            <TextView
+                android:id="@+id/textPaidDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary"
+                android:textSize="10sp"
+                android:visibility="gone"
+                tools:text="Paid: 20/05/23"
+                tools:visibility="visible" />
         </LinearLayout>
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipPaidStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textSize="12sp"
-            app:chipMinHeight="32dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/sessionDetailsRow"
-            tools:chipBackgroundColor="@color/success"
-            tools:text="Paid" />
-
-        <TextView
-            android:id="@+id/textPaidDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/chipPaidStatus"
-            tools:text="Paid on: May 20, 2023"
-            tools:visibility="visible" />
-
+        <!-- We removed the day of week text and the session details row in favor of a more compact layout -->
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView> 

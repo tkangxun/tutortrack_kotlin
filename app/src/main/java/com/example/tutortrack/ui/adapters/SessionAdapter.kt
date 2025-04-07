@@ -30,7 +30,8 @@ data class SessionWithDetails(
 
 class SessionAdapter(
     private val onPaymentStatusClick: ((Session, Boolean, Date?) -> Unit)? = null,
-    private val onSessionDelete: ((Session) -> Unit)? = null
+    private val onSessionDelete: ((Session) -> Unit)? = null,
+    private val onSessionEdit: ((Session) -> Unit)? = null
 ) : ListAdapter<SessionWithDetails, SessionAdapter.SessionViewHolder>(SessionDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SessionViewHolder {
@@ -53,6 +54,8 @@ class SessionAdapter(
         private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         private val monthFormat = SimpleDateFormat("MMM", Locale.getDefault())
         private val dayFormat = SimpleDateFormat("dd", Locale.getDefault())
+        private val dayOfWeekFormat = SimpleDateFormat("EEEE", Locale.getDefault())
+        private val combinedDayDateFormat = SimpleDateFormat("MMM dd, EEEE", Locale.getDefault())
 
         fun bind(sessionWithDetails: SessionWithDetails) {
             val session = sessionWithDetails.session
@@ -70,10 +73,9 @@ class SessionAdapter(
                 textDateMonth.text = monthFormat.format(session.date).uppercase()
                 textDateDay.text = dayFormat.format(session.date)
                 
-                // Set full date
-                textSessionDate.text = dateFormat.format(session.date)
-                textSessionDuration.text = String.format(Locale.getDefault(), "%.1f hours", session.durationMinutes / 60.0)
-                textSessionAmount.text = String.format(Locale.getDefault(), "SGD $%.2f", session.amount)
+                // Day of week is now only shown in the header, not in individual cards
+                textSessionDuration.text = String.format(Locale.getDefault(), "%.1f hrs", session.durationMinutes / 60.0)
+                textSessionAmount.text = String.format(Locale.getDefault(), "$%.2f", session.amount)
                 
                 updatePaymentStatus(session)
                 
@@ -96,11 +98,17 @@ class SessionAdapter(
                 
                 // Set up click listener for navigation to student detail
                 root.setOnClickListener {
-                    student?.let { student ->
-                        val bundle = Bundle().apply {
-                            putLong("studentId", student.id)
+                    // If onSessionEdit is provided, use it to edit the session
+                    if (onSessionEdit != null) {
+                        onSessionEdit.invoke(session)
+                    } else {
+                        // Otherwise, navigate to student detail (original behavior)
+                        student?.let { student ->
+                            val bundle = Bundle().apply {
+                                putLong("studentId", student.id)
+                            }
+                            itemView.findNavController().navigate(R.id.studentDetailFragment, bundle)
                         }
-                        itemView.findNavController().navigate(R.id.studentDetailFragment, bundle)
                     }
                 }
                 
@@ -120,10 +128,12 @@ class SessionAdapter(
                     if (session.isPaid) R.color.success else R.color.warning
                 )
                 
-                // Handle paid date display
+                // Handle paid date display with shorter format
                 if (session.isPaid && session.paidDate != null) {
                     textPaidDate.visibility = View.VISIBLE
-                    textPaidDate.text = "Paid on: ${dateFormat.format(session.paidDate)}"
+                    // Use a more compact date format
+                    val shortDateFormat = SimpleDateFormat("dd/MM/yy", Locale.getDefault())
+                    textPaidDate.text = "Paid: ${shortDateFormat.format(session.paidDate)}"
                 } else {
                     textPaidDate.visibility = View.GONE
                 }

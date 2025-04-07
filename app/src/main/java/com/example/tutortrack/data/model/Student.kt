@@ -11,9 +11,10 @@ data class Student(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
-    val phone: String,
+    val phone: String? = null,
     val grade: String,
     val parentName: String = "",
     val parentContact: String = "",
-    val notes: String = ""
+    val notes: String = "",
+    val isArchived: Boolean = false
 ) : Parcelable 

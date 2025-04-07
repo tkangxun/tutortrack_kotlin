@@ -2,11 +2,16 @@ package com.example.tutortrack.ui.student
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.widget.SearchView
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -24,6 +29,9 @@ class StudentListFragment : Fragment() {
     private lateinit var studentViewModel: StudentViewModel
     private lateinit var sessionViewModel: SessionViewModel
     private lateinit var adapter: StudentAdapter
+    
+    // Flag to track if we're showing archived students
+    private var showingArchived = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -41,15 +49,92 @@ class StudentListFragment : Fragment() {
         setupRecyclerView()
         setupListeners()
         setupSearch()
+        setupMenu()
+    }
+    
+    private fun setupMenu() {
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.menu_student_list, menu)
+                
+                // Update menu item text based on current mode
+                val archiveMenuItem = menu.findItem(R.id.action_toggle_archive)
+                updateArchiveMenuTitle(archiveMenuItem)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.action_toggle_archive -> {
+                        toggleArchivedView()
+                        updateArchiveMenuTitle(menuItem)
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+    }
+    
+    private fun updateArchiveMenuTitle(menuItem: MenuItem) {
+        menuItem.title = if (showingArchived) {
+            getString(R.string.show_active_students)
+        } else {
+            getString(R.string.show_archived_students)
+        }
+    }
+    
+    private fun toggleArchivedView() {
+        showingArchived = !showingArchived
+        
+        // Clear search view when toggling
+        binding.searchView.setQuery("", false)
+        binding.searchView.clearFocus()
+        
+        // Update UI based on mode
+        binding.fabAddStudent.visibility = if (showingArchived) View.GONE else View.VISIBLE
+        
+        // Update title
+        updateTitle()
+        
+        // Reload student list
+        loadStudentList()
+    }
+    
+    private fun updateTitle() {
+        activity?.title = if (showingArchived) "Archived Students" else "Students"
     }
     
     private fun setupViewModels() {
         studentViewModel = ViewModelProvider(this)[StudentViewModel::class.java]
         sessionViewModel = ViewModelProvider(this)[SessionViewModel::class.java]
         
-        studentViewModel.allStudents.observe(viewLifecycleOwner) { students ->
-            adapter.submitList(students)
-            binding.emptyStateContainer.visibility = if (students.isEmpty()) View.VISIBLE else View.GONE
+        loadStudentList()
+    }
+    
+    private fun loadStudentList() {
+        if (showingArchived) {
+            studentViewModel.archivedStudents.observe(viewLifecycleOwner) { students ->
+                adapter.submitList(students)
+                updateEmptyState(students)
+            }
+        } else {
+            studentViewModel.allStudents.observe(viewLifecycleOwner) { students ->
+                adapter.submitList(students)
+                updateEmptyState(students)
+            }
+        }
+    }
+    
+    private fun updateEmptyState(students: List<Student>) {
+        if (students.isEmpty()) {
+            binding.emptyStateContainer.visibility = View.VISIBLE
+            binding.emptyView.text = if (showingArchived) {
+                getString(R.string.no_archived_students)
+            } else {
+                getString(R.string.no_students)
+            }
+        } else {
+            binding.emptyStateContainer.visibility = View.GONE
         }
     }
     
@@ -63,6 +148,12 @@ class StudentListFragment : Fragment() {
             },
             onStudentDelete = { student ->
                 deleteStudent(student)
+            },
+            onStudentArchive = { student ->
+                archiveStudent(student)
+            },
+            onStudentUnarchive = { student ->
+                unarchiveStudent(student)
             }
         )
         
@@ -84,6 +175,16 @@ class StudentListFragment : Fragment() {
         }
     }
     
+    private fun archiveStudent(student: Student) {
+        studentViewModel.archiveStudent(student)
+        Toast.makeText(requireContext(), "${student.name} archived", Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun unarchiveStudent(student: Student) {
+        studentViewModel.unarchiveStudent(student)
+        Toast.makeText(requireContext(), "${student.name} unarchived", Toast.LENGTH_SHORT).show()
+    }
+    
     private fun setupListeners() {
         binding.fabAddStudent.setOnClickListener {
             val bundle = Bundle().apply {
@@ -103,29 +204,38 @@ class StudentListFragment : Fragment() {
         binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 if (!query.isNullOrBlank()) {
-                    studentViewModel.searchStudents(query).observe(viewLifecycleOwner) { students ->
-                        adapter.submitList(students)
-                        binding.emptyStateContainer.visibility = if (students.isEmpty()) View.VISIBLE else View.GONE
-                    }
+                    performSearch(query)
                 }
                 return true
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 if (newText.isNullOrBlank()) {
-                    studentViewModel.allStudents.observe(viewLifecycleOwner) { students ->
-                        adapter.submitList(students)
-                        binding.emptyStateContainer.visibility = if (students.isEmpty()) View.VISIBLE else View.GONE
-                    }
+                    loadStudentList()
                 } else {
-                    studentViewModel.searchStudents(newText).observe(viewLifecycleOwner) { students ->
-                        adapter.submitList(students)
-                        binding.emptyStateContainer.visibility = if (students.isEmpty()) View.VISIBLE else View.GONE
-                    }
+                    performSearch(newText)
                 }
                 return true
             }
         })
+    }
+    
+    private fun performSearch(query: String) {
+        val searchObservable = if (showingArchived) {
+            studentViewModel.searchArchivedStudents(query)
+        } else {
+            studentViewModel.searchStudents(query)
+        }
+        
+        searchObservable.observe(viewLifecycleOwner) { students ->
+            adapter.submitList(students)
+            updateEmptyState(students)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateTitle()
     }
 
     override fun onDestroyView() {

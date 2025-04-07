@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -13,7 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.tutortrack.R
 import com.example.tutortrack.databinding.FragmentHomeBinding
 import com.example.tutortrack.data.model.Session
-import com.example.tutortrack.ui.adapters.SessionAdapter
+import com.example.tutortrack.ui.adapters.SessionGroupAdapter
 import com.example.tutortrack.ui.adapters.SessionWithDetails
 import com.example.tutortrack.ui.session.SessionViewModel
 import com.example.tutortrack.ui.student.StudentViewModel
@@ -29,9 +30,12 @@ class HomeFragment : Fragment() {
     
     private lateinit var sessionViewModel: SessionViewModel
     private lateinit var studentViewModel: StudentViewModel
-    private lateinit var sessionAdapter: SessionAdapter
+    private lateinit var sessionAdapter: SessionGroupAdapter
     
     private val currencyFormat = NumberFormat.getCurrencyInstance()
+    private val prefs by lazy { requireContext().getSharedPreferences("income_prefs", 0) }
+    private val KEY_SELECTED_PERIOD = "selected_income_period"
+    private val KEY_SELECTED_UNPAID_PERIOD = "selected_unpaid_period"
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -48,6 +52,7 @@ class HomeFragment : Fragment() {
         setupViewModels()
         setupRecyclerView()
         setupPeriodSpinner()
+        setupUnpaidPeriodSpinner()
         loadData()
     }
     
@@ -57,7 +62,7 @@ class HomeFragment : Fragment() {
     }
     
     private fun setupRecyclerView() {
-        sessionAdapter = SessionAdapter(
+        sessionAdapter = SessionGroupAdapter(
             onPaymentStatusClick = { session, isPaid, paidDate ->
                 handlePaymentStatusChange(session, isPaid, paidDate)
             },
@@ -72,21 +77,87 @@ class HomeFragment : Fragment() {
     private fun setupPeriodSpinner() {
         val periods = arrayOf(
             getString(R.string.income_period_total),
+            getString(R.string.income_period_year),
             getString(R.string.income_period_month),
             getString(R.string.income_period_week)
         )
         
-        val adapter = ArrayAdapter(
+        // Create custom adapter with a specific layout for the spinner header
+        val adapter = object : ArrayAdapter<String>(
             requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
+            R.layout.item_spinner_header,
+            R.id.text1,
             periods
-        )
+        ) {
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                return super.getDropDownView(position, convertView, parent).apply {
+                    // Change background color for dropdown items to match the surface color
+                    setBackgroundColor(resources.getColor(R.color.surface, null))
+                    findViewById<TextView>(R.id.text1).setTextColor(resources.getColor(R.color.text_primary, null))
+                }
+            }
+        }
         
         binding.spinnerPeriod.adapter = adapter
         
+        // Restore previously selected period
+        val savedPosition = prefs.getInt(KEY_SELECTED_PERIOD, 0)
+        binding.spinnerPeriod.setSelection(savedPosition)
+        
         binding.spinnerPeriod.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                // Make selected text color white for better visibility on blue background
+                view?.findViewById<TextView>(R.id.text1)?.setTextColor(resources.getColor(R.color.white, null))
+                
+                // Save selected position
+                prefs.edit().putInt(KEY_SELECTED_PERIOD, position).apply()
                 updateIncomeDisplay(position)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                // Do nothing
+            }
+        }
+    }
+    
+    private fun setupUnpaidPeriodSpinner() {
+        val periods = arrayOf(
+            getString(R.string.unpaid_period_total),
+            getString(R.string.unpaid_period_year),
+            getString(R.string.unpaid_period_month),
+            getString(R.string.unpaid_period_week)
+        )
+        
+        // Create custom adapter with a specific layout for the spinner header
+        val adapter = object : ArrayAdapter<String>(
+            requireContext(),
+            R.layout.item_spinner_header,
+            R.id.text1,
+            periods
+        ) {
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                return super.getDropDownView(position, convertView, parent).apply {
+                    // Change background color for dropdown items to match the surface color
+                    setBackgroundColor(resources.getColor(R.color.surface, null))
+                    findViewById<TextView>(R.id.text1).setTextColor(resources.getColor(R.color.text_primary, null))
+                }
+            }
+        }
+        
+        binding.spinnerUnpaidPeriod.adapter = adapter
+        
+        // Restore previously selected period
+        val savedPosition = prefs.getInt(KEY_SELECTED_UNPAID_PERIOD, 0)
+        binding.spinnerUnpaidPeriod.setSelection(savedPosition)
+        
+        binding.spinnerUnpaidPeriod.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                // Make selected text color black for better visibility on yellow background
+                view?.findViewById<TextView>(R.id.text1)?.setTextColor(resources.getColor(R.color.black, null))
+                
+                // Save selected position
+                prefs.edit().putInt(KEY_SELECTED_UNPAID_PERIOD, position).apply()
+                updateUnpaidIncomeDisplay(position)
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
@@ -111,19 +182,21 @@ class HomeFragment : Fragment() {
     private fun updateIncomeDisplay(periodPosition: Int) {
         when (periodPosition) {
             0 -> { // Total
-                binding.incomeTitle.text = getString(R.string.income_period_total)
                 sessionViewModel.getTotalIncome().observe(viewLifecycleOwner) { total ->
                     binding.textTotalIncome.text = String.format(Locale.getDefault(), "SGD $%.2f", total ?: 0.0)
                 }
             }
-            1 -> { // Monthly
-                binding.incomeTitle.text = getString(R.string.income_period_month)
+            1 -> { // Yearly
+                sessionViewModel.getYearlyIncome().observe(viewLifecycleOwner) { total ->
+                    binding.textTotalIncome.text = String.format(Locale.getDefault(), "SGD $%.2f", total ?: 0.0)
+                }
+            }
+            2 -> { // Monthly
                 sessionViewModel.getMonthlyIncome().observe(viewLifecycleOwner) { total ->
                     binding.textTotalIncome.text = String.format(Locale.getDefault(), "SGD $%.2f", total ?: 0.0)
                 }
             }
-            2 -> { // Weekly
-                binding.incomeTitle.text = getString(R.string.income_period_week)
+            3 -> { // Weekly
                 sessionViewModel.getWeeklyIncome().observe(viewLifecycleOwner) { total ->
                     binding.textTotalIncome.text = String.format(Locale.getDefault(), "SGD $%.2f", total ?: 0.0)
                 }
@@ -131,9 +204,39 @@ class HomeFragment : Fragment() {
         }
     }
     
+    private fun updateUnpaidIncomeDisplay(periodPosition: Int) {
+        when (periodPosition) {
+            0 -> { // Total
+                sessionViewModel.getTotalUnpaidIncome().observe(viewLifecycleOwner) { unpaid ->
+                    binding.textUnpaidIncome.text = String.format(Locale.getDefault(), "SGD $%.2f", unpaid ?: 0.0)
+                }
+            }
+            1 -> { // Yearly
+                sessionViewModel.getYearlyUnpaidIncome().observe(viewLifecycleOwner) { unpaid ->
+                    binding.textUnpaidIncome.text = String.format(Locale.getDefault(), "SGD $%.2f", unpaid ?: 0.0)
+                }
+            }
+            2 -> { // Monthly
+                sessionViewModel.getMonthlyUnpaidIncome().observe(viewLifecycleOwner) { unpaid ->
+                    binding.textUnpaidIncome.text = String.format(Locale.getDefault(), "SGD $%.2f", unpaid ?: 0.0)
+                }
+            }
+            3 -> { // Weekly
+                sessionViewModel.getWeeklyUnpaidIncome().observe(viewLifecycleOwner) { unpaid ->
+                    binding.textUnpaidIncome.text = String.format(Locale.getDefault(), "SGD $%.2f", unpaid ?: 0.0)
+                }
+            }
+        }
+    }
+    
     private fun loadData() {
-        // Load initial income (total)
-        updateIncomeDisplay(0)
+        // Load income based on saved period
+        val savedPosition = prefs.getInt(KEY_SELECTED_PERIOD, 0)
+        updateIncomeDisplay(savedPosition)
+        
+        // Load unpaid income based on saved period
+        val savedUnpaidPosition = prefs.getInt(KEY_SELECTED_UNPAID_PERIOD, 0)
+        updateUnpaidIncomeDisplay(savedUnpaidPosition)
         
         // Load student count
         studentViewModel.allStudents.observe(viewLifecycleOwner) { students ->
@@ -155,7 +258,9 @@ class HomeFragment : Fragment() {
                 .filter { it.session.date >= sevenDaysAgo }
                 .sortedByDescending { it.session.date }
             
-            sessionAdapter.submitList(recentSessions)
+            // Group the sessions by day
+            val groupedItems = SessionGroupAdapter.groupSessionsByDay(recentSessions)
+            sessionAdapter.submitList(groupedItems)
             
             binding.textNoSessions.visibility = if (recentSessions.isEmpty()) View.VISIBLE else View.GONE
         }
