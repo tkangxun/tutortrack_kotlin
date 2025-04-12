@@ -52,4 +52,22 @@ interface StudentDao {
      */
     @Query("SELECT * FROM students ORDER BY id DESC LIMIT 1")
     fun getLastInsertedStudent(): LiveData<Student>
+
+    /**
+     * Get all students - synchronous version for import functionality
+     */
+    @Query("SELECT * FROM students WHERE isArchived = 0 ORDER BY name ASC")
+    suspend fun getAllStudentsSync(): List<Student>
+    
+    /**
+     * Get all students including archived - synchronous version for import functionality
+     */
+    @Query("SELECT * FROM students ORDER BY name ASC")
+    suspend fun getAllStudentsIncludingArchivedSync(): List<Student>
+    
+    /**
+     * Search for students containing the given text in their name - synchronous version for import
+     */
+    @Query("SELECT * FROM students WHERE name LIKE '%' || :searchText || '%' ORDER BY name ASC")
+    suspend fun getStudentByNameContainingSync(searchText: String): List<Student>
 } 

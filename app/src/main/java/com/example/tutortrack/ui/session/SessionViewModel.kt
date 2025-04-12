@@ -11,6 +11,8 @@ import com.example.tutortrack.ui.adapters.SessionWithDetails
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Date
+import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 class SessionViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -99,5 +101,61 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
 
     fun getYearlyUnpaidIncome(): LiveData<Double> {
         return repository.getYearlyUnpaidIncome()
+    }
+
+    /**
+     * Get sessions in date range by timestamp (for export functionality)
+     * @param startDateTimestamp the start date as a timestamp
+     * @param endDateTimestamp the end date as a timestamp
+     * @return List of SessionWithDetails in the date range
+     */
+    suspend fun getSessionsInDateRange(startDateTimestamp: Long, endDateTimestamp: Long): List<SessionWithDetails> {
+        val startDate = Date(startDateTimestamp)
+        
+        // Set the end date to the end of the day (23:59:59)
+        val endDateCalendar = Calendar.getInstance()
+        endDateCalendar.timeInMillis = endDateTimestamp
+        endDateCalendar.set(Calendar.HOUR_OF_DAY, 23)
+        endDateCalendar.set(Calendar.MINUTE, 59)
+        endDateCalendar.set(Calendar.SECOND, 59)
+        endDateCalendar.set(Calendar.MILLISECOND, 999)
+        val endDate = endDateCalendar.time
+        
+        // Create synchronous version by accessing DAO directly
+        val dao = AppDatabase.getDatabase(getApplication()).sessionDao()
+        
+        val sessionsWithStudentAndClassType = withContext(Dispatchers.IO) {
+            dao.getSessionsWithDetailsInDateRangeSync(startDate, endDate)
+        }
+        
+        // Map to SessionWithDetails
+        return sessionsWithStudentAndClassType.map { it.toSessionWithDetails() }
+    }
+    
+    /**
+     * Bulk update multiple sessions as paid
+     * @param sessionIds List of session IDs to mark as paid
+     * @param paidDate The date to set as the payment date
+     */
+    fun bulkUpdateSessionsPaid(sessionIds: List<Long>, paidDate: Date) = viewModelScope.launch(Dispatchers.IO) {
+        val dao = AppDatabase.getDatabase(getApplication()).sessionDao()
+        sessionIds.forEach { sessionId ->
+            val session = dao.getSessionByIdSync(sessionId)
+            session?.let {
+                val updatedSession = it.copy(isPaid = true, paidDate = paidDate)
+                repository.updateSession(updatedSession)
+            }
+        }
+    }
+    
+    /**
+     * Force refresh data from the database
+     * This is needed to ensure proper state when returning to the fragment
+     */
+    fun refreshData() = viewModelScope.launch(Dispatchers.IO) {
+        val dao = AppDatabase.getDatabase(getApplication()).sessionDao()
+        // Simply accessing the database will trigger LiveData updates
+        val tempSessions = dao.getAllSessions()
+        // No need to actually do anything with the result, just trigger the LiveData
     }
 } 

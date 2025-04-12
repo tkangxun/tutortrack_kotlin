@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp">
+
+    <CheckBox
+        android:id="@+id/checkboxSession"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:checked="true"
+        app:layout_constraintEnd_toStartOf="@+id/textSessionAmount"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Jan 15, 2023 - Math (1 hr)" />
+
+    <TextView
+        android:id="@+id/textSessionAmount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@+id/checkboxSession"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/checkboxSession"
+        tools:text="$45.00" />
+
+</androidx.constraintlayout.widget.ConstraintLayout> 

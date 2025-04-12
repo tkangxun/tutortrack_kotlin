@@ -257,6 +257,23 @@
                             android:layout_weight="1" />
                             
                         <com.google.android.material.button.MaterialButton
+                            android:id="@+id/buttonImport"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginEnd="8dp"
+                            android:insetLeft="0dp"
+                            android:insetTop="0dp"
+                            android:insetRight="0dp"
+                            android:insetBottom="0dp"
+                            android:padding="12dp"
+                            app:icon="@drawable/ic_upload"
+                            app:iconGravity="textStart"
+                            app:iconPadding="0dp"
+                            app:iconTint="@color/text_on_primary"
+                            app:backgroundTint="@color/primary"
+                            style="@style/Widget.MaterialComponents.Button" />
+                            
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/buttonExport"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
@@ -272,6 +289,13 @@
                             app:backgroundTint="@color/primary"
                             style="@style/Widget.MaterialComponents.Button" />
                     </LinearLayout>
+                    
+                    <ProgressBar
+                        android:id="@+id/progressImport"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

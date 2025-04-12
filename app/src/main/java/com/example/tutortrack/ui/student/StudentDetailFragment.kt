@@ -32,6 +32,7 @@ import com.example.tutortrack.data.model.Student
 import com.example.tutortrack.databinding.DialogInvoiceBinding
 import com.example.tutortrack.databinding.FragmentStudentDetailBinding
 import com.example.tutortrack.databinding.ItemSessionBinding
+import com.example.tutortrack.databinding.ItemSessionCheckboxBinding
 import com.example.tutortrack.ui.adapters.SessionAdapter
 import com.example.tutortrack.ui.adapters.SessionWithDetails
 import com.example.tutortrack.ui.classtype.ClassTypeViewModel
@@ -43,6 +44,10 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.TextView
+import java.text.NumberFormat
 
 class StudentDetailFragment : Fragment() {
 
@@ -120,6 +125,9 @@ class StudentDetailFragment : Fragment() {
             paidDate = if (isPaid) paidDate else null
         )
         sessionViewModel.updateSession(updatedSession)
+        
+        // Update button visibility whenever a session's payment status changes
+        updateFabVisibility()
     }
     
     private fun deleteSession(session: Session) {
@@ -244,15 +252,17 @@ class StudentDetailFragment : Fragment() {
                 
             // Check if there are any unpaid sessions
             unpaidSessions = sessionsWithDetails.filter { !it.session.isPaid }
-            updateInvoiceButtonVisibility()
+            updateFabVisibility()
         }
     }
     
-    private fun updateInvoiceButtonVisibility() {
-        // Only show invoice button when Sessions tab is selected and there are unpaid sessions
-        val shouldShowInvoiceButton = binding.recyclerViewSessions.visibility == View.VISIBLE && 
-                                      unpaidSessions.isNotEmpty()
-        binding.fabInvoice.visibility = if (shouldShowInvoiceButton) View.VISIBLE else View.GONE
+    private fun updateFabVisibility() {
+        // Only show buttons when Sessions tab is selected and there are unpaid sessions
+        val shouldShowButtons = binding.recyclerViewSessions.visibility == View.VISIBLE && 
+                               unpaidSessions.isNotEmpty()
+        
+        binding.fabInvoice.visibility = if (shouldShowButtons) View.VISIBLE else View.GONE
+        binding.fabBulkPayment.visibility = if (shouldShowButtons) View.VISIBLE else View.GONE
     }
     
     private fun setupTabLayout() {
@@ -264,6 +274,7 @@ class StudentDetailFragment : Fragment() {
                         binding.recyclerViewSessions.visibility = View.GONE
                         binding.fabAddSession.visibility = View.GONE
                         binding.fabInvoice.visibility = View.GONE
+                        binding.fabBulkPayment.visibility = View.GONE
                         binding.fabDateSearch.visibility = View.GONE
                         binding.textNoSessions.visibility = View.GONE
                         binding.fabEditStudent.visibility = View.VISIBLE
@@ -278,8 +289,8 @@ class StudentDetailFragment : Fragment() {
                         val isSessionsEmpty = sessionAdapter.itemCount == 0
                         binding.textNoSessions.visibility = if (isSessionsEmpty) View.VISIBLE else View.GONE
                         
-                        // Update invoice button visibility when tab is selected
-                        updateInvoiceButtonVisibility()
+                        // Update invoice and bulk payment button visibility when tab is selected
+                        updateFabVisibility()
                     }
                 }
             }
@@ -321,6 +332,10 @@ class StudentDetailFragment : Fragment() {
             
             fabDateSearch.setOnClickListener {
                 showDatePickerForSearch()
+            }
+            
+            fabBulkPayment.setOnClickListener {
+                showBulkPaymentDialog()
             }
         }
     }
@@ -751,6 +766,193 @@ class StudentDetailFragment : Fragment() {
             // Stay on the detail page after unarchiving, refresh the options menu
             requireActivity().invalidateOptionsMenu()
         }
+    }
+
+    private fun showBulkPaymentDialog() {
+        if (unpaidSessions.isEmpty()) {
+            Toast.makeText(requireContext(), "No unpaid sessions found", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Inflate the dialog layout
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_bulk_payment, null)
+        val dialogBuilder = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(true)
+        
+        val dialog = dialogBuilder.create()
+        dialog.show()
+        
+        // Get references to the dialog views
+        val checkboxContainer = dialogView.findViewById<ViewGroup>(R.id.sessionCheckboxContainer)
+        val checkboxSelectAll = dialogView.findViewById<CheckBox>(R.id.checkboxSelectAll)
+        val textTotalAmount = dialogView.findViewById<TextView>(R.id.textTotalAmount)
+        val editPaymentDate = dialogView.findViewById<EditText>(R.id.editPaymentDate)
+        val buttonCancel = dialogView.findViewById<View>(R.id.buttonCancel)
+        val buttonMarkAsPaid = dialogView.findViewById<View>(R.id.buttonMarkAsPaid)
+        
+        // Set current date as the default payment date
+        val calendar = Calendar.getInstance()
+        val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+        val currentDate = calendar.time
+        editPaymentDate.setText(dateFormat.format(currentDate))
+        
+        // Add click listener to payment date field to show date picker
+        editPaymentDate.setOnClickListener {
+            showDatePickerDialog(editPaymentDate, calendar)
+        }
+        
+        // Add session checkboxes to the container
+        val sessionCheckboxMap = mutableMapOf<Long, Boolean>()
+        val sessionViewMap = mutableMapOf<Long, View>()
+        
+        for (sessionWithDetails in unpaidSessions) {
+            val session = sessionWithDetails.session
+            val student = sessionWithDetails.student
+            val itemBinding = ItemSessionCheckboxBinding.inflate(LayoutInflater.from(requireContext()), checkboxContainer, false)
+            
+            // Format the session text with date, class type, and duration
+            val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+            val classTypeName = sessionWithDetails.classType?.name ?: "Unknown"
+            val durationHours = session.durationMinutes / 60.0
+            val durationText = if (durationHours == 1.0) "1 hr" else "$durationHours hrs"
+            
+            // No need to show student name since we're in student detail view
+            itemBinding.checkboxSession.text = "${dateFormatter.format(session.date)} - $classTypeName ($durationText)"
+            
+            // Format amount with US currency
+            val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
+            itemBinding.textSessionAmount.text = currencyFormatter.format(session.amount)
+            
+            // Set initial checked state and update map
+            itemBinding.checkboxSession.isChecked = true
+            sessionCheckboxMap[session.id] = true
+            
+            // Add change listener to update the map when checkbox state changes
+            itemBinding.checkboxSession.setOnCheckedChangeListener { _, isChecked ->
+                sessionCheckboxMap[session.id] = isChecked
+                updateTotalAmount(sessionCheckboxMap, unpaidSessions, textTotalAmount)
+                
+                // Update the select all checkbox state
+                val allChecked = sessionCheckboxMap.values.all { it }
+                val anyChecked = sessionCheckboxMap.values.any { it }
+                
+                checkboxSelectAll.isChecked = allChecked
+                // Use indeterminate state if some but not all are checked
+                if (anyChecked && !allChecked) {
+                    // We can't set indeterminate state programmatically
+                    // But we can at least make sure it's not checked
+                    checkboxSelectAll.isChecked = false
+                }
+            }
+            
+            // Store the view for later reference
+            sessionViewMap[session.id] = itemBinding.root
+            
+            // Add the checkbox item to the container
+            checkboxContainer.addView(itemBinding.root)
+        }
+        
+        // Set up select all checkbox listener
+        checkboxSelectAll.setOnCheckedChangeListener { _, isChecked ->
+            // Update all checkboxes to match the select all state
+            for (sessionId in sessionCheckboxMap.keys) {
+                sessionCheckboxMap[sessionId] = isChecked
+                
+                // Also update the actual checkbox UI
+                val view = sessionViewMap[sessionId]
+                view?.findViewById<CheckBox>(R.id.checkboxSession)?.isChecked = isChecked
+            }
+            
+            updateTotalAmount(sessionCheckboxMap, unpaidSessions, textTotalAmount)
+        }
+        
+        // Initial update of total amount
+        updateTotalAmount(sessionCheckboxMap, unpaidSessions, textTotalAmount)
+        
+        // Set up button listeners
+        buttonCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        buttonMarkAsPaid.setOnClickListener {
+            // Get selected session IDs
+            val selectedSessionIds = sessionCheckboxMap.filter { it.value }.map { it.key }
+            
+            if (selectedSessionIds.isEmpty()) {
+                Toast.makeText(requireContext(), "No sessions selected", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            // Process the bulk payment
+            val paymentDate = calendar.time
+            processBulkPayment(selectedSessionIds, paymentDate)
+            dialog.dismiss()
+        }
+    }
+    
+    private fun updateTotalAmount(
+        sessionCheckboxMap: Map<Long, Boolean>,
+        unpaidSessions: List<SessionWithDetails>,
+        textTotalAmount: TextView
+    ) {
+        // Calculate total amount for selected sessions
+        val totalAmount = unpaidSessions
+            .filter { sessionCheckboxMap[it.session.id] == true }
+            .sumOf { it.session.amount }
+        
+        // Format and display the total amount using US currency
+        val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
+        textTotalAmount.text = "Total: ${currencyFormatter.format(totalAmount)}"
+    }
+    
+    private fun showDatePickerDialog(editText: EditText, calendar: Calendar) {
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+        
+        val datePickerDialog = DatePickerDialog(
+            requireContext(),
+            { _, selectedYear, selectedMonth, selectedDay ->
+                calendar.set(selectedYear, selectedMonth, selectedDay)
+                val selectedDate = calendar.time
+                
+                // Update the text field with the formatted date
+                val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                editText.setText(dateFormat.format(selectedDate))
+            },
+            year, month, day
+        )
+        
+        // Limit the date picker to today or earlier
+        datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
+        
+        datePickerDialog.show()
+    }
+    
+    private fun processBulkPayment(sessionIds: List<Long>, paymentDate: Date) {
+        if (sessionIds.isEmpty()) return
+        
+        // Update all selected sessions to paid with the same payment date
+        sessionViewModel.bulkUpdateSessionsPaid(sessionIds, paymentDate)
+        
+        // Show success message
+        val sessionText = if (sessionIds.size == 1) "session" else "sessions"
+        Toast.makeText(
+            requireContext(),
+            "${sessionIds.size} $sessionText marked as paid",
+            Toast.LENGTH_SHORT
+        ).show()
+        
+        // Update the FAB visibility after processing payments
+        updateFabVisibility()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        
+        // Update button visibility when returning to this fragment
+        updateFabVisibility()
     }
 
     override fun onDestroyView() {

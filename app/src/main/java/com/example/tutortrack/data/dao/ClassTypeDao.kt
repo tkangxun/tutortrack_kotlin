@@ -35,4 +35,10 @@ interface ClassTypeDao {
      */
     @Query("DELETE FROM class_types WHERE studentId = :studentId AND id NOT IN (:keepIds)")
     suspend fun deleteRemovedClassTypes(studentId: Long, keepIds: List<Long>)
+
+    /**
+     * Get class types by student ID - synchronous version for import functionality
+     */
+    @Query("SELECT * FROM class_types WHERE studentId = :studentId ORDER BY name ASC")
+    suspend fun getClassTypesByStudentIdSync(studentId: Long): List<ClassType>
 } 

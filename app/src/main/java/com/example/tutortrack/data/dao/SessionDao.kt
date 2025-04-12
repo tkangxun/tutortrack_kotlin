@@ -94,4 +94,33 @@ interface SessionDao {
            "WHERE sessions.date BETWEEN :startDate AND :endDate " +
            "ORDER BY sessions.date DESC")
     fun getSessionsWithDetailsInDateRange(startDate: Date, endDate: Date): LiveData<List<SessionWithStudentAndClassType>>
+
+    /**
+     * Get sessions by student ID - synchronous version for import functionality
+     */
+    @Query("SELECT * FROM sessions WHERE studentId = :studentId ORDER BY date DESC")
+    suspend fun getSessionsByStudentIdSync(studentId: Long): List<Session>
+    
+    /**
+     * Get sessions in date range - synchronous version for import functionality
+     */
+    @Query("SELECT * FROM sessions WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
+    suspend fun getSessionsInDateRangeSync(startDate: Date, endDate: Date): List<Session>
+    
+    /**
+     * Get sessions with details in date range - synchronous version for export functionality
+     */
+    @Transaction
+    @Query("SELECT sessions.*, students.name as studentName, class_types.name as classTypeName FROM sessions " +
+           "LEFT JOIN students ON sessions.studentId = students.id " +
+           "LEFT JOIN class_types ON sessions.classTypeId = class_types.id " +
+           "WHERE sessions.date BETWEEN :startDate AND :endDate " +
+           "ORDER BY sessions.date DESC")
+    suspend fun getSessionsWithDetailsInDateRangeSync(startDate: Date, endDate: Date): List<SessionWithStudentAndClassType>
+    
+    /**
+     * Get session by ID - synchronous version
+     */
+    @Query("SELECT * FROM sessions WHERE id = :sessionId")
+    fun getSessionByIdSync(sessionId: Long): Session?
 } 

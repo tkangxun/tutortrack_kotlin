@@ -165,4 +165,16 @@
         app:tint="@color/text_on_primary"
         app:srcCompat="@android:drawable/ic_input_add" />
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabBulkPayment"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="80dp"
+        android:backgroundTint="@color/primary"
+        android:contentDescription="Bulk payment options"
+        android:src="@drawable/ic_payment"
+        app:tint="@color/text_on_primary" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout> 
